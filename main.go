@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -14,7 +15,9 @@ func main() {
 		server.WithRecovery(),
 	)
 
-	RegisterTools(s)
+	httpClient := http.DefaultClient
+	apiBaseURL := APIBaseURL
+	registerTools(s, httpClient, apiBaseURL)
 
 	if err := server.ServeStdio(s); err != nil {
 		fmt.Printf("Server error: %v\n", err)

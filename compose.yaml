@@ -1,5 +1,6 @@
 services:
   app:
+    image: mcp-dnd-server
     build:
       context: .
       dockerfile: Dockerfile

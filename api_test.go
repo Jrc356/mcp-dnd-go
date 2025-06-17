@@ -97,3 +97,40 @@ func TestFetchItem(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchClassFeatures(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/features" {
+			fmt.Fprint(w, `{"results": [
+				{"index": "wizard-arcane-recovery", "name": "Arcane Recovery"},
+				{"index": "fighter-second-wind", "name": "Second Wind"},
+				{"index": "wizard-spell-mastery", "name": "Spell Mastery"}
+			]}`)
+		} else {
+			w.WriteHeader(404)
+		}
+	}))
+	defer ts.Close()
+	client := ts.Client()
+	tests := []struct {
+		name       string
+		classIndex string
+		wantCount  int
+		wantErr    bool
+	}{
+		{"wizard features", "wizard", 2, false},
+		{"fighter features", "fighter", 1, false},
+		{"no match", "rogue", 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			features, err := FetchClassFeatures(client, ts.URL, tt.classIndex)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("FetchClassFeatures() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && len(features) != tt.wantCount {
+				t.Errorf("FetchClassFeatures() got %d features, want %d", len(features), tt.wantCount)
+			}
+		})
+	}
+}

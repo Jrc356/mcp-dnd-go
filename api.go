@@ -61,7 +61,7 @@ func FetchItems(client *http.Client, apiBaseURL, category string) (map[string]in
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("Category '%s' not found or API request failed", category)
+		return nil, fmt.Errorf("Category '%s' not found or API request failed (status %d)", category, resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -115,4 +115,36 @@ func FetchItem(client *http.Client, apiBaseURL, category, index string) (map[str
 		return nil, err
 	}
 	return data, nil
+}
+
+func FetchClassFeatures(client *http.Client, apiBaseURL, classIndex string) ([]map[string]interface{}, error) {
+	resp, err := client.Get(apiBaseURL + "/features")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("API request failed with status %s", resp.Status)
+	}
+	var data map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	results, ok := data["results"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("no features found in API response")
+	}
+	features := []map[string]interface{}{}
+	prefix := classIndex + "-"
+	for _, v := range results {
+		item, ok := v.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		index, _ := item["index"].(string)
+		if len(index) > len(prefix) && index[:len(prefix)] == prefix {
+			features = append(features, item)
+		}
+	}
+	return features, nil
 }
