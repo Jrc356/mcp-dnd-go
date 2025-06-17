@@ -1,0 +1,38 @@
+# Go build artifacts
+mcp-dnd-server
+*.test
+
+# Logs
+logs/
+*.log
+
+# IDE/editor files
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Local configuration
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+claude_desktop_config.json
+
+# Docker volumes/cache
+cache/
+
+# Temporary files
+*.tmp
+*.bak
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Coverage/test
+htmlcov/
+.coverage
+.coverage.*
+.cache
+*.cover
+.hypothesis/
