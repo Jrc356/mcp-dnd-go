@@ -62,6 +62,30 @@ func main() {
 			monsterToolInput{},
 			handleMonsterTool,
 		),
+		newAPITool(
+			abilityScores,
+			"Fetches information about D&D 5e ability scores.",
+			abilityScoreToolInput{},
+			handleAbilityScoreTool,
+		),
+		newAPITool(
+			alignments,
+			"Fetches information about D&D 5e alignments.",
+			alignmentToolInput{},
+			handleAlignmentTool,
+		),
+		newAPITool(
+			backgrounds,
+			"Fetches information about D&D 5e backgrounds.",
+			backgroundToolInput{},
+			handleBackgroundTool,
+		),
+		newAPITool(
+			classes,
+			"Fetches information about D&D 5e classes.",
+			classToolInput{},
+			handleClassTool,
+		),
 	}
 	for _, tool := range tools {
 		logrus.WithFields(logrus.Fields{
