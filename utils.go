@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// structToToolOptions converts a struct to a slice of MCP ToolOptions.
+// makeToolOptions converts a struct to a slice of MCP ToolOptions.
 // It inspects the struct fields, extracts JSON and MCP tags, and creates ToolOptions accordingly.
 // Fields without a JSON tag or with a JSON tag of "-" are ignored.
 // The MCP tag is expected to contain a description in the format "description=...".
@@ -22,7 +22,7 @@ import (
 //	    Active bool   `json:"active" mcp:"description=Whether the item is active."`
 //	    Tags  []string `json:"tags" mcp:"description=Tags associated with the item."`
 //	}
-func structToToolOptions(s any) []mcp.ToolOption {
+func makeToolOptions(s any) []mcp.ToolOption {
 	logrus.Debugf("Converting struct %T to MCP ToolOptions", s)
 	var opts []mcp.ToolOption
 	t := reflect.TypeOf(s)
@@ -70,7 +70,7 @@ func fieldToToolOption(name string, description string, fieldType reflect.Type) 
 		return mcp.WithBoolean(name, mcp.Description(description))
 	case reflect.Struct:
 		logrus.Debugf("field %s is a struct", name)
-		return mcp.WithObject(name, mcp.Description(description), mcp.Properties(structToProperties(reflect.Zero(fieldType).Interface())))
+		return mcp.WithObject(name, mcp.Description(description), mcp.Properties(makeProperties(reflect.Zero(fieldType).Interface())))
 	case reflect.Slice:
 		logrus.Debugf("field %s is a slice", name)
 		elemType := fieldType.Elem()
@@ -121,7 +121,7 @@ func fieldToProperty(description string, field reflect.StructField) map[string]a
 	case reflect.Struct:
 		logrus.Debugf("field %s is a struct", field.Name)
 		prop["type"] = "object"
-		prop["properties"] = structToProperties(reflect.Zero(fieldType).Interface())
+		prop["properties"] = makeProperties(reflect.Zero(fieldType).Interface())
 	case reflect.Slice:
 		logrus.Debugf("field %s is a slice", field.Name)
 		elemType := fieldType.Elem()
@@ -149,13 +149,13 @@ func fieldToProperty(description string, field reflect.StructField) map[string]a
 	return prop
 }
 
-// structToProperties converts a struct to a map of properties for use in MCP schemas.
+// makeProperties converts a struct to a map of properties for use in MCP schemas.
 // It inspects the struct fields, extracts JSON and MCP tags, and creates a properties map.
 // Fields without a JSON tag or with a JSON tag of "-" are ignored.
 // The MCP tag is expected to contain a description in the format "description=...".
 // If the MCP tag is not present or does not contain a description, the field is skipped.
 // If a field type is unsupported, it logs a warning and skips that field.
-func structToProperties(s any) map[string]any {
+func makeProperties(s any) map[string]any {
 	logrus.Debugf("Converting struct %T to properties", s)
 	props := make(map[string]any)
 	t := reflect.TypeOf(s)

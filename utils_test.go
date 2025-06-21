@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test struct for structToToolOptions and structToProperties
 type testStruct struct {
 	Name   string `json:"name" mcp:"description=The name of the item"`
 	Level  int    `json:"level" mcp:"description=The level of the item"`
@@ -35,7 +34,7 @@ type arrayStruct struct {
 	Scores []int    `json:"scores" mcp:"description=List of scores"`
 }
 
-func TestStructToToolOptions(t *testing.T) {
+func TestMakeToolOptions(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -54,7 +53,7 @@ func TestStructToToolOptions(t *testing.T) {
 			"happy path - nested struct",
 			nestedStruct{},
 			mcp.NewTool("test",
-				mcp.WithObject("inner", mcp.Description("Inner struct"), mcp.Properties(structToProperties(testStruct{"Sword", 5, true}))),
+				mcp.WithObject("inner", mcp.Description("Inner struct"), mcp.Properties(makeProperties(testStruct{"Sword", 5, true}))),
 			),
 		},
 		{
@@ -83,7 +82,7 @@ func TestStructToToolOptions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := structToToolOptions(tt.input)
+			got := makeToolOptions(tt.input)
 			gotTool := mcp.NewTool("test", got...)
 			expectedTool := tt.expected
 			assert.Equal(t, expectedTool.InputSchema.Properties, gotTool.InputSchema.Properties)
@@ -91,7 +90,7 @@ func TestStructToToolOptions(t *testing.T) {
 	}
 }
 
-func TestStructToProperties(t *testing.T) {
+func TestToolProperties(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -140,7 +139,7 @@ func TestStructToProperties(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			props := structToProperties(tt.input)
+			props := makeProperties(tt.input)
 			assert.Equal(t, tt.expected, props)
 		})
 	}

@@ -24,7 +24,7 @@ func newAPITool[T any](
 	opts := []mcp.ToolOption{
 		mcp.WithDescription(description),
 	}
-	opts = append(opts, structToToolOptions(input)...)
+	opts = append(opts, makeToolOptions(input)...)
 	tool := mcp.NewTool(string(e), opts...)
 	logrus.Debugf("Tool Input Schema Properties: %v", tool.InputSchema.Properties)
 	return server.ServerTool{
