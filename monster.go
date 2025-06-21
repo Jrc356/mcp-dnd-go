@@ -19,17 +19,12 @@ type monsterListAPIResponse struct {
 
 // monsterToolInput defines the input structure for the monster tool.
 type monsterToolInput struct {
-	Name   string         `json:"name" mcp:"description=The index of the monster to retrieve."`
-	Filter *monsterFilter `json:"filter" mcp:"description=Filter options for the monster list."`
-}
-
-// monsterFilter defines the filter options for the monster tool input.
-type monsterFilter struct {
+	Name            string    `json:"name" mcp:"description=The index of the monster to retrieve."`
 	ChallengeRating []float64 `json:"challenge_rating" mcp:"description=The challenge rating(s) to filter on."`
 }
 
 // buildQueryString constructs a query string from the monsterFilter fields for use in API requests.
-func (f *monsterFilter) buildQueryString() string {
+func (f *monsterToolInput) buildQueryString() string {
 	if f == nil || len(f.ChallengeRating) == 0 {
 		return ""
 	}
@@ -179,10 +174,10 @@ func fetchMonsterByNameResult(
 func fetchMonsterListResult(
 	client *http.Client,
 	input monsterToolInput,
-	fetchList func(*http.Client, endpoint, any, filter) error,
+	fetchList func(*http.Client, endpoint, any, string) error,
 ) (*mcp.CallToolResult, error) {
 	var results []monsterListAPIResponse
-	err := fetchList(client, monsters, &results, input.Filter)
+	err := fetchList(client, monsters, &results, input.buildQueryString())
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("Failed to fetch monster list", err), err
 	}
@@ -198,7 +193,7 @@ func fetchMonsterListResult(
 func runMonsterTool(
 	input monsterToolInput,
 	fetchByName func(*http.Client, endpoint, string, any) error,
-	fetchList func(*http.Client, endpoint, any, filter) error,
+	fetchList func(*http.Client, endpoint, any, string) error,
 ) (*mcp.CallToolResult, error) {
 	client := http.DefaultClient
 	if input.Name != "" {

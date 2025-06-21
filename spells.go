@@ -13,27 +13,22 @@ import (
 
 // spellToolInput defines the input structure for the spell tool.
 type spellToolInput struct {
-	Name   string       `json:"name" mcp:"description=The name of the spell to retrieve."`
-	Filter *spellFilter `json:"filter" mcp:"description=Filter options for the spell list."`
+	Name   string `json:"name" mcp:"description=The name of the spell to retrieve."`
+	Level  int    `json:"level" mcp:"description=The level of the spell."`
+	School string `json:"school" mcp:"description=The school of magic the spell belongs to."`
 }
 
-// spellFilter defines the filter options for the spell tool input.
-type spellFilter struct {
-	Level  *int    `json:"level" mcp:"description=The level of the spell."`
-	School *string `json:"school" mcp:"description=The school of magic the spell belongs to."`
-}
-
-// buildQueryString constructs a query string from the spellFilter fields for use in API requests.
-func (f *spellFilter) buildQueryString() string {
+// buildQueryString constructs a query string from the spellToolInput fields for use in API requests.
+func (f *spellToolInput) buildQueryString() string {
 	if f == nil {
 		return ""
 	}
 	params := []string{}
-	if f.Level != nil {
-		params = append(params, "level="+strconv.Itoa(*f.Level))
+	if f.Level != 0 {
+		params = append(params, "level="+strconv.Itoa(f.Level))
 	}
-	if f.School != nil {
-		params = append(params, "school="+*f.School)
+	if f.School != "" {
+		params = append(params, "school="+f.School)
 	}
 	if len(params) == 0 {
 		return ""
@@ -122,10 +117,10 @@ func fetchSpellByNameResult(
 func fetchSpellListResult(
 	client *http.Client,
 	input spellToolInput,
-	fetchList func(*http.Client, endpoint, any, filter) error,
+	fetchList func(*http.Client, endpoint, any, string) error,
 ) (*mcp.CallToolResult, error) {
 	var results []spellListAPIResponse
-	err := fetchList(client, spells, &results, input.Filter)
+	err := fetchList(client, spells, &results, input.buildQueryString())
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("Failed to fetch spell list", err), err
 	}
@@ -142,7 +137,7 @@ func fetchSpellListResult(
 func runSpellTool(
 	input spellToolInput,
 	fetchByName func(*http.Client, endpoint, string, any) error,
-	fetchList func(*http.Client, endpoint, any, filter) error,
+	fetchList func(*http.Client, endpoint, any, string) error,
 ) (*mcp.CallToolResult, error) {
 	client := http.DefaultClient
 	if input.Name != "" {

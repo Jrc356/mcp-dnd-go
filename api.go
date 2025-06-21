@@ -43,11 +43,6 @@ const (
 	weaponProperties    endpoint = "weapon-properties"
 )
 
-// filter is an interface that defines a method to build a query string for filtering API requests.
-type filter interface {
-	buildQueryString() string
-}
-
 // listResponse defines the structure of the response for a list endpoint.
 type listResponse struct {
 	Count   int                      `json:"count"`
@@ -98,10 +93,10 @@ func fetchByName(client *http.Client, e endpoint, name string, v any) error {
 }
 
 // fetchAPIList fetches a list of items for the given endpoint from the D&D 5e API.
-func fetchAPIList(client *http.Client, endpoint endpoint, filter filter) (listResponse, error) {
+func fetchAPIList(client *http.Client, endpoint endpoint, filter string) (listResponse, error) {
 	url := fmt.Sprintf("%s/%s", apiBaseURL, endpoint)
-	if filter != nil {
-		url = fmt.Sprintf("%s?%s", url, filter.buildQueryString())
+	if filter != "" {
+		url = fmt.Sprintf("%s?%s", url, filter)
 	}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -124,7 +119,7 @@ func fetchAPIList(client *http.Client, endpoint endpoint, filter filter) (listRe
 }
 
 // fetchList fetches a list of items from the D&D 5e API and unmarshals it into the provided variable.
-func fetchList(client *http.Client, e endpoint, v any, filter filter) error {
+func fetchList(client *http.Client, e endpoint, v any, filter string) error {
 	logrus.WithFields(logrus.Fields{"endpoint": e, "filter": filter}).Debug("fetchList called")
 	spells, err := fetchAPIList(client, e, filter)
 	if err != nil {

@@ -25,6 +25,8 @@ func newAPITool[T any](
 		mcp.WithDescription(description),
 	}
 	opts = append(opts, makeToolOptions(input)...)
+	readonly := true
+	opts = append(opts, mcp.WithToolAnnotation(mcp.ToolAnnotation{ReadOnlyHint: &readonly, OpenWorldHint: &readonly}))
 	tool := mcp.NewTool(string(e), opts...)
 	logrus.Debugf("Tool Input Schema Properties: %v", tool.InputSchema.Properties)
 	return server.ServerTool{
@@ -43,28 +45,21 @@ func main() {
 		"1.0.0",
 		server.WithToolCapabilities(true),
 		server.WithRecovery(),
+		server.WithLogging(),
 	)
 
 	logrus.Info("Creating tools...")
 	tools := []server.ServerTool{
 		newAPITool(
 			spells,
-			"fetches information about d&d 5e spells.",
-			spellToolInput{
-				// a value is needed to generate the schema
-				Name:   "spells",
-				Filter: &spellFilter{},
-			},
+			"Fetches information about D&D 5e spells.",
+			spellToolInput{},
 			handleSpellTool,
 		),
 		newAPITool(
 			monsters,
-			"fetches information about d&d 5e monsters.",
-			monsterToolInput{
-				// a value is needed to generate the schema
-				Name:   "monsters",
-				Filter: &monsterFilter{},
-			},
+			"Fetches information about D&D 5e monsters.",
+			monsterToolInput{},
 			handleMonsterTool,
 		),
 	}

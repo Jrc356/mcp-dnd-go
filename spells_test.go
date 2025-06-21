@@ -11,29 +11,23 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-func TestSpellFilter_buildQueryString(t *testing.T) {
-	level := 3
-	school := "evocation"
-
+func TestSpellInput_buildQueryString(t *testing.T) {
 	tests := []struct {
-		name   string
-		filter *spellFilter
-		want   string
+		name  string
+		input *spellToolInput
+		want  string
 	}{
 		{"nil filter", nil, ""},
-		{"empty filter", &spellFilter{}, ""},
-		{"level only", &spellFilter{Level: &level}, "level=3"},
-		{"school only", &spellFilter{School: &school}, "school=evocation"},
-		{"level and school", &spellFilter{Level: &level, School: &school}, "level=3&school=evocation"},
-		{"all fields", &spellFilter{Level: &level, School: &school}, "level=3&school=evocation"},
+		{"empty filter", &spellToolInput{}, ""},
+		{"level only", &spellToolInput{Level: 3}, "level=3"},
+		{"school only", &spellToolInput{School: "evocation"}, "school=evocation"},
+		{"level and school", &spellToolInput{Level: 3, School: "evocation"}, "level=3&school=evocation"},
+		{"all fields", &spellToolInput{Level: 3, School: "evocation"}, "level=3&school=evocation"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ""
-			if tt.filter != nil {
-				got = tt.filter.buildQueryString()
-			}
+			got := tt.input.buildQueryString()
 			if got != tt.want {
 				t.Errorf("buildQueryString() = %q, want %q", got, tt.want)
 			}
@@ -65,7 +59,7 @@ func TestRunSpellTool(t *testing.T) {
 		name       string
 		input      spellToolInput
 		mockByName func(*http.Client, endpoint, string, any) error
-		mockList   func(*http.Client, endpoint, any, filter) error
+		mockList   func(*http.Client, endpoint, any, string) error
 		wantOutput spellToolOutput
 		wantErr    bool
 		wantErrMsg string
@@ -81,7 +75,7 @@ func TestRunSpellTool(t *testing.T) {
 				*ptr = spell
 				return nil
 			},
-			mockList:   func(_ *http.Client, _ endpoint, v any, _ filter) error { return nil },
+			mockList:   func(_ *http.Client, _ endpoint, v any, _ string) error { return nil },
 			wantOutput: spellToolOutput{Spell: &spell},
 			wantErr:    false,
 			wantErrMsg: "",
@@ -90,7 +84,7 @@ func TestRunSpellTool(t *testing.T) {
 			name:       "list",
 			input:      spellToolInput{},
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error { return nil },
-			mockList: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockList: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				ptr, ok := v.(*[]spellListAPIResponse)
 				if !ok {
 					return errors.New("wrong type")
@@ -108,7 +102,7 @@ func TestRunSpellTool(t *testing.T) {
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error {
 				return errors.New("fetchByName failed")
 			},
-			mockList:   func(_ *http.Client, _ endpoint, v any, _ filter) error { return nil },
+			mockList:   func(_ *http.Client, _ endpoint, v any, _ string) error { return nil },
 			wantOutput: spellToolOutput{},
 			wantErr:    true,
 			wantErrMsg: "fetchByName failed",
@@ -117,7 +111,7 @@ func TestRunSpellTool(t *testing.T) {
 			name:       "fetchList error",
 			input:      spellToolInput{},
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error { return nil },
-			mockList: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockList: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				return errors.New("fetchList failed")
 			},
 			wantOutput: spellToolOutput{},
@@ -128,7 +122,7 @@ func TestRunSpellTool(t *testing.T) {
 			name:       "empty list",
 			input:      spellToolInput{},
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error { return nil },
-			mockList: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockList: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				ptr, ok := v.(*[]spellListAPIResponse)
 				if !ok {
 					return errors.New("wrong type")
@@ -151,7 +145,7 @@ func TestRunSpellTool(t *testing.T) {
 				*ptr = spellAPIResponse{} // zero value
 				return nil
 			},
-			mockList:   func(_ *http.Client, _ endpoint, v any, _ filter) error { return nil },
+			mockList:   func(_ *http.Client, _ endpoint, v any, _ string) error { return nil },
 			wantOutput: spellToolOutput{Spell: &spellAPIResponse{}},
 			wantErr:    false,
 			wantErrMsg: "",
@@ -160,7 +154,7 @@ func TestRunSpellTool(t *testing.T) {
 			name:       "tool error result",
 			input:      spellToolInput{Name: ""},
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error { return nil },
-			mockList: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockList: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				return errors.New("test Go error")
 			},
 			wantOutput: spellToolOutput{},
@@ -298,7 +292,7 @@ func TestFetchSpellListResult(t *testing.T) {
 	cases := []struct {
 		name       string
 		input      spellToolInput
-		mockFn     func(*http.Client, endpoint, any, filter) error
+		mockFn     func(*http.Client, endpoint, any, string) error
 		wantErr    bool
 		wantErrMsg string
 		wantCount  int
@@ -306,7 +300,7 @@ func TestFetchSpellListResult(t *testing.T) {
 		{
 			name:  "success",
 			input: spellToolInput{},
-			mockFn: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockFn: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				ptr := v.(*[]spellListAPIResponse)
 				*ptr = spells
 				return nil
@@ -317,7 +311,7 @@ func TestFetchSpellListResult(t *testing.T) {
 		{
 			name:  "fetch error",
 			input: spellToolInput{},
-			mockFn: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockFn: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				return errors.New("fail list")
 			},
 			wantErr:    true,

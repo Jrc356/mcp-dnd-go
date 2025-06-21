@@ -10,23 +10,20 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-func TestMonsterFilter_buildQueryString(t *testing.T) {
+func TestMonsterInput_buildQueryString(t *testing.T) {
 	cases := []struct {
-		name   string
-		filter *monsterFilter
-		want   string
+		name  string
+		input *monsterToolInput
+		want  string
 	}{
 		{"nil filter", nil, ""},
-		{"empty filter", &monsterFilter{}, ""},
-		{"single CR", &monsterFilter{ChallengeRating: []float64{1}}, "challenge_rating=1"},
-		{"multiple CRs", &monsterFilter{ChallengeRating: []float64{1, 2.5}}, "challenge_rating=1,2.5"},
+		{"empty filter", &monsterToolInput{}, ""},
+		{"single CR", &monsterToolInput{ChallengeRating: []float64{1}}, "challenge_rating=1"},
+		{"multiple CRs", &monsterToolInput{ChallengeRating: []float64{1, 2.5}}, "challenge_rating=1,2.5"},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ""
-			if tt.filter != nil {
-				got = tt.filter.buildQueryString()
-			}
+			got := tt.input.buildQueryString()
 			if got != tt.want {
 				t.Errorf("buildQueryString() = %q, want %q", got, tt.want)
 			}
@@ -41,7 +38,7 @@ func TestRunMonsterTool(t *testing.T) {
 		name       string
 		input      monsterToolInput
 		mockByName func(*http.Client, endpoint, string, any) error
-		mockList   func(*http.Client, endpoint, any, filter) error
+		mockList   func(*http.Client, endpoint, any, string) error
 		wantOutput monsterToolOutput
 		wantErr    bool
 		wantErrMsg string
@@ -57,7 +54,7 @@ func TestRunMonsterTool(t *testing.T) {
 				*ptr = monster
 				return nil
 			},
-			mockList:   func(_ *http.Client, _ endpoint, v any, _ filter) error { return nil },
+			mockList:   func(_ *http.Client, _ endpoint, v any, _ string) error { return nil },
 			wantOutput: monsterToolOutput{Monster: &monster},
 			wantErr:    false,
 			wantErrMsg: "",
@@ -66,7 +63,7 @@ func TestRunMonsterTool(t *testing.T) {
 			name:       "list",
 			input:      monsterToolInput{},
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error { return nil },
-			mockList: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockList: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				ptr, ok := v.(*[]monsterListAPIResponse)
 				if !ok {
 					return errors.New("wrong type")
@@ -84,7 +81,7 @@ func TestRunMonsterTool(t *testing.T) {
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error {
 				return errors.New("fetchByName failed")
 			},
-			mockList:   func(_ *http.Client, _ endpoint, v any, _ filter) error { return nil },
+			mockList:   func(_ *http.Client, _ endpoint, v any, _ string) error { return nil },
 			wantOutput: monsterToolOutput{},
 			wantErr:    true,
 			wantErrMsg: "fetchByName failed",
@@ -93,7 +90,7 @@ func TestRunMonsterTool(t *testing.T) {
 			name:       "fetchList error",
 			input:      monsterToolInput{},
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error { return nil },
-			mockList: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockList: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				return errors.New("fetchList failed")
 			},
 			wantOutput: monsterToolOutput{},
@@ -104,7 +101,7 @@ func TestRunMonsterTool(t *testing.T) {
 			name:       "empty list",
 			input:      monsterToolInput{},
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error { return nil },
-			mockList: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockList: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				ptr, ok := v.(*[]monsterListAPIResponse)
 				if !ok {
 					return errors.New("wrong type")
@@ -127,7 +124,7 @@ func TestRunMonsterTool(t *testing.T) {
 				*ptr = monsterDetail{} // zero value
 				return nil
 			},
-			mockList:   func(_ *http.Client, _ endpoint, v any, _ filter) error { return nil },
+			mockList:   func(_ *http.Client, _ endpoint, v any, _ string) error { return nil },
 			wantOutput: monsterToolOutput{Monster: &monsterDetail{}},
 			wantErr:    false,
 			wantErrMsg: "",
@@ -136,7 +133,7 @@ func TestRunMonsterTool(t *testing.T) {
 			name:       "tool error result",
 			input:      monsterToolInput{Name: ""},
 			mockByName: func(_ *http.Client, _ endpoint, name string, v any) error { return nil },
-			mockList: func(_ *http.Client, _ endpoint, v any, _ filter) error {
+			mockList: func(_ *http.Client, _ endpoint, v any, _ string) error {
 				return errors.New("test Go error")
 			},
 			wantOutput: monsterToolOutput{},
