@@ -19,9 +19,6 @@ logs/
 .env.production.local
 claude_desktop_config.json
 
-# Docker volumes/cache
-cache/
-
 # Temporary files
 *.tmp
 *.bak

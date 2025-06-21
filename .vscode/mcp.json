@@ -1,16 +1,10 @@
 {
   "servers": {
-    // "dnd5e": {
-    //   "type": "stdio",
-    //   "command": "go",
-    //   "args": ["run", "."],
-    //   "cwd": "${workspaceFolder}",
-    // },
-    "dnd5e-docker": {
+    "dnd5e": {
       "type": "stdio",
-      "command": "docker",
-      "args": ["run", "--rm", "-i", "mcp-dnd-server"],
-      "cwd": "${workspaceFolder}"
-    }
+      "command": "go",
+      "args": ["run", "."],
+      "cwd": "${workspaceFolder}",
+    },
   }
 }

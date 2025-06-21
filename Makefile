@@ -1,25 +1,17 @@
 build:
-	docker compose build
+	go build -o mcp-dnd-server .
 
 run:
-	docker compose up -d
+	go run .
 
-run-attached:
-	docker compose up
-
-build-and-run: build run
-
-build-and-run-attached: build run-attached
-
-stop:
-	docker compose stop
-
-remove:
-	docker compose rm -f
-
-clean: stop remove
+clean:
+	rm -f mcp-dnd-server
 
 setup:
-	go mod tidy
+	go mod download
+	npm install -g @modelcontextprotocol/inspector
 
-.PHONY: build run build-and-run stop remove clean setup run-attached build-and-run-attached
+run-inspector:
+	mcp-inspector go run .
+
+.PHONY: build run clean setup run-inspector

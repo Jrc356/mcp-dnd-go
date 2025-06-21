@@ -1,0 +1,14 @@
+[
+  {
+    "index": "fireball",
+    "name": "Fireball",
+    "level": 3,
+    "url": "/api/spells/fireball"
+  },
+  {
+    "index": "magic-missile",
+    "name": "Magic Missile",
+    "level": 1,
+    "url": "/api/spells/magic-missile"
+  }
+]

@@ -5,22 +5,58 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+
+	"github.com/sirupsen/logrus"
 )
 
-type Category struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	URI         string `json:"uri"`
+// endpoint represents a specific API endpoint in the D&D 5e API.
+type endpoint string
+
+const (
+	apiBaseURL            = "https://www.dnd5eapi.co/api"
+	requestTimeoutSeconds = 10
+
+	abilityScores       endpoint = "ability-scores"
+	alignments          endpoint = "alignments"
+	backgrounds         endpoint = "backgrounds"
+	classes             endpoint = "classes"
+	conditions          endpoint = "conditions"
+	damageTypes         endpoint = "damage-types"
+	equipment           endpoint = "equipment"
+	equipmentCategories endpoint = "equipment-categories"
+	feats               endpoint = "feats"
+	features            endpoint = "features"
+	languages           endpoint = "languages"
+	magicItems          endpoint = "magic-items"
+	magicSchools        endpoint = "magic-schools"
+	monsters            endpoint = "monsters"
+	proficiencies       endpoint = "proficiencies"
+	races               endpoint = "races"
+	ruleSections        endpoint = "rule-sections"
+	rules               endpoint = "rules"
+	skills              endpoint = "skills"
+	spells              endpoint = "spells"
+	subclasses          endpoint = "subclasses"
+	subraces            endpoint = "subraces"
+	traits              endpoint = "traits"
+	weaponProperties    endpoint = "weapon-properties"
+)
+
+// filter is an interface that defines a method to build a query string for filtering API requests.
+type filter interface {
+	buildQueryString() string
 }
 
-type Item struct {
-	Name  string `json:"name"`
-	Index string `json:"index"`
-	URI   string `json:"uri"`
+// listResponse defines the structure of the response for a list endpoint.
+type listResponse struct {
+	Count   int                      `json:"count"`
+	Results []map[string]interface{} `json:"results"`
 }
 
-func FetchCategories(client *http.Client, apiBaseURL string) (map[string]interface{}, error) {
-	resp, err := client.Get(apiBaseURL + "/")
+// fetchAPIItem fetches a single item by endpoint and item from the D&D 5e API.
+func fetchAPIItem(client *http.Client, endpoint endpoint, item string) (map[string]interface{}, error) {
+	resp, err := client.Get(fmt.Sprintf("%s/%s/%s", apiBaseURL, endpoint, url.PathEscape(item)))
 	if err != nil {
 		return nil, err
 	}
@@ -36,115 +72,74 @@ func FetchCategories(client *http.Client, apiBaseURL string) (map[string]interfa
 	if err := json.Unmarshal(body, &data); err != nil {
 		return nil, err
 	}
-	categories := []Category{}
-	for key := range data {
-		desc, ok := CategoryDescriptions[key]
-		if !ok {
-			desc = fmt.Sprintf("Collection of D&D 5e %s", key)
-		}
-		categories = append(categories, Category{
-			Name:        key,
-			Description: desc,
-			URI:         fmt.Sprintf("resource://dnd/items/%s", key),
-		})
-	}
-	return map[string]interface{}{
-		"categories": categories,
-		"count":      len(categories),
-	}, nil
+	return data, nil
 }
 
-func FetchItems(client *http.Client, apiBaseURL, category string) (map[string]interface{}, error) {
-	resp, err := client.Get(fmt.Sprintf("%s/%s", apiBaseURL, category))
+// fetchByName fetches an item by name from the D&D 5e API and unmarshals it into the provided variable.
+func fetchByName(client *http.Client, e endpoint, name string, v any) error {
+	logrus.WithFields(logrus.Fields{"endpoint": e, "name": name}).Debug("fetchByName called")
+	index := toKebabCase(name)
+	data, err := fetchAPIItem(client, e, index)
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).Error("fetchAPIItem failed in fetchByName")
+		return err
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		logrus.WithError(err).Error("Marshal failed in fetchByName")
+		return err
+	}
+	if err := json.Unmarshal(b, v); err != nil {
+		logrus.WithError(err).Error("Unmarshal failed in fetchByName")
+		return err
+	}
+	logrus.WithField("name", name).Debug("fetchByName succeeded")
+	return nil
+}
+
+// fetchAPIList fetches a list of items for the given endpoint from the D&D 5e API.
+func fetchAPIList(client *http.Client, endpoint endpoint, filter filter) (listResponse, error) {
+	url := fmt.Sprintf("%s/%s", apiBaseURL, endpoint)
+	if filter != nil {
+		url = fmt.Sprintf("%s?%s", url, filter.buildQueryString())
+	}
+	resp, err := client.Get(url)
+	if err != nil {
+		return listResponse{}, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("Category '%s' not found or API request failed (status %d)", category, resp.StatusCode)
+		return listResponse{}, fmt.Errorf("API request failed with status %d", resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return listResponse{}, err
 	}
-	var data map[string]interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		return nil, err
-	}
-	results, ok := data["results"].([]interface{})
-	if !ok {
-		results = []interface{}{}
-	}
-	items := []Item{}
-	for _, v := range results {
-		itemMap, ok := v.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		name, _ := itemMap["name"].(string)
-		index, _ := itemMap["index"].(string)
-		items = append(items, Item{
-			Name:  name,
-			Index: index,
-			URI:   fmt.Sprintf("resource://dnd/item/%s/%s", category, index),
-		})
-	}
-	return map[string]interface{}{
-		"category": category,
-		"count":    len(items),
-		"items":    items,
-		"source":   "D&D 5e API (www.dnd5eapi.co)",
-	}, nil
-}
 
-func FetchItem(client *http.Client, apiBaseURL, category, index string) (map[string]interface{}, error) {
-	resp, err := client.Get(fmt.Sprintf("%s/%s/%s", apiBaseURL, category, index))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("Item '%s' not found in category '%s' or API request failed", index, category)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	var data map[string]interface{}
+	var data listResponse
 	if err := json.Unmarshal(body, &data); err != nil {
-		return nil, err
+		return listResponse{}, err
 	}
 	return data, nil
 }
 
-func FetchClassFeatures(client *http.Client, apiBaseURL, classIndex string) ([]map[string]interface{}, error) {
-	resp, err := client.Get(apiBaseURL + "/features")
+// fetchList fetches a list of items from the D&D 5e API and unmarshals it into the provided variable.
+func fetchList(client *http.Client, e endpoint, v any, filter filter) error {
+	logrus.WithFields(logrus.Fields{"endpoint": e, "filter": filter}).Debug("fetchList called")
+	spells, err := fetchAPIList(client, e, filter)
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).Error("fetchAPIList failed in fetchList")
+		return err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("API request failed with status %s", resp.Status)
+	jsonData, err := json.Marshal(spells.Results)
+	if err != nil {
+		logrus.WithError(err).Error("Marshal failed in fetchList")
+		return err
 	}
-	var data map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
+	if err := json.Unmarshal(jsonData, v); err != nil {
+		logrus.WithError(err).Error("Unmarshal failed in fetchList")
+		return err
 	}
-	results, ok := data["results"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("no features found in API response")
-	}
-	features := []map[string]interface{}{}
-	prefix := classIndex + "-"
-	for _, v := range results {
-		item, ok := v.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		index, _ := item["index"].(string)
-		if len(index) > len(prefix) && index[:len(prefix)] == prefix {
-			features = append(features, item)
-		}
-	}
-	return features, nil
+	logrus.Debug("fetchList succeeded")
+	return nil
 }

@@ -1,0 +1,45 @@
+{
+  "index": "fireball",
+  "name": "Fireball",
+  "desc": [
+    "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame."
+  ],
+  "range": "150 feet",
+  "components": [
+    "V",
+    "S",
+    "M"
+  ],
+  "ritual": false,
+  "duration": "Instantaneous",
+  "concentration": false,
+  "casting_time": "1 action",
+  "level": 3,
+  "dc": {
+    "dc_type": {
+      "index": "dex",
+      "name": "DEX",
+      "url": "/api/ability-scores/dex"
+    },
+    "dc_success": "half"
+  },
+  "area_of_effect": {
+    "type": "sphere",
+    "size": 20
+  },
+  "school": {
+    "index": "evocation",
+    "name": "Evocation",
+    "url": "/api/magic-schools/evocation"
+  },
+  "classes": [
+    {
+      "index": "wizard",
+      "name": "Wizard",
+      "url": "/api/classes/wizard"
+    }
+  ],
+  "subclasses": [],
+  "url": "/api/spells/fireball",
+  "updated_at": "2025-06-20T00:00:00Z"
+}
